@@ -4,35 +4,41 @@ import random
 saldo_banca = 50000  # Saldo inicial de la banca
 
 class jugador(threading.Thread):
-    def __init__(self,saldo,apuesta):
+    def __init__(self,nombre,saldo,apuesta):
         threading.Thread.__init__(self)
+        self.nombre = nombre
         self.saldo = saldo
         self.apuesta = apuesta
     # Función para simular el juego a un número concreto
-    def jugar_numero(self,numero):
+    def jugar_numero(self):
         while True:
+            numero=random.randint(1,36)
+            print(f'{self.nombre}: {self.saldo}')
             if self.saldo >= self.apuesta:
+                print(f'{self.nombre} tiene pasta')
                 # Se resta la apuesta del saldo
                 self.saldo -= self.apuesta
                 # Se simula el giro de la ruleta
                 resultado = random.randint(1, 36)
                 if resultado == numero:
+                    print(f'{self.nombre} ha ganado')
                     # Si el número apostado coincide con el resultado, se incrementa el saldo en 360 euros
                     self.saldo += 360
                 else:
+                    print(f'{self.nombre} ha perdido')
                     # Si no coincide, se pierde la apuesta
-                    pass
             else:
                 # Si no hay suficiente saldo para apostar, se sale del bucle
+                print(f'{self.nombre} no tiene suficiente pasta para apostar')
                 break
 
     # Función para simular el juego a par/impar
     def jugar_par_impar(self):
+        list=['par','impar']
         while True:
-            apuesta = 10  # Apuesta de 10 euros
-            if self.saldo >= apuesta:
+            if self.saldo >= self.apuesta:
                 # Se resta la apuesta del saldo
-                self.saldo -= apuesta
+                self.saldo -= self.apuesta
                 # Se simula el giro de la ruleta
                 resultado = random.randint(1, 36)
                 if resultado % 2 == 0:
@@ -46,8 +52,9 @@ class jugador(threading.Thread):
                 break
 
     # Función para simular el juego a la "martingala"
-    def jugar_martingala(self,numero):
+    def jugar_martingala(self):
         while True:
+            numero=random.randint(1,36)
             if self.saldo >= self.apuesta:
                 # Se resta la apuesta del saldo
                 self.saldo -= self.apuesta
@@ -64,12 +71,12 @@ class jugador(threading.Thread):
                 # Si no hay suficiente saldo para apostar, se sale del bucle
                 break
     def run(self):
-        self.jugar_numero(numero = random.randint(1, 36))
+        self.jugar_numero()
 
-jugador1=jugador(1000,10)
-jugador2=jugador(1000,10)
-jugador3=jugador(1000,10)
-jugador4=jugador(1000,10)
+jugador1=jugador('Javi',1000,10)
+jugador2=jugador('Felipe',1000,10)
+jugador3=jugador('Andres',1000,10)
+jugador4=jugador('Juan',1000,10)
 jugadores=[jugador1,jugador2,jugador3,jugador4]
 
 # Creación de hilos para simular los diferentes juegos
