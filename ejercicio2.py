@@ -1,32 +1,45 @@
 import threading
 import random
-
-saldo_banca = 50000  # Saldo inicial de la banca
+import time
 
 class jugador(threading.Thread):
-    def __init__(self,nombre,saldo,apuesta):
+    def __init__(self,nombre,saldo,apuesta,ruleta):
         threading.Thread.__init__(self)
         self.nombre = nombre
         self.saldo = saldo
         self.apuesta = apuesta
+        self.ruleta=ruleta
     # Función para simular el juego a un número concreto
     def jugar_numero(self):
         while True:
             numero=random.randint(1,36)
             print(f'{self.nombre}: {self.saldo}')
-            if self.saldo >= self.apuesta:
-                print(f'{self.nombre} tiene pasta')
-                # Se resta la apuesta del saldo
-                self.saldo -= self.apuesta
-                # Se simula el giro de la ruleta
-                resultado = random.randint(1, 36)
-                if resultado == numero:
-                    print(f'{self.nombre} ha ganado')
-                    # Si el número apostado coincide con el resultado, se incrementa el saldo en 360 euros
-                    self.saldo += 360
+            if self.saldo >= self.apuesta :
+                if self.ruleta.lock.locked()==False:
+                    print(f'{self.nombre} tiene pasta y va a apostar')
+                    # Se resta la apuesta del saldo
+                    self.saldo -= self.apuesta
+                    self.ruleta.banca += self.apuesta
+                    # Se simula el giro de la ruleta
+                    if self.ruleta.resultado == numero :
+                        if self.ruleta.banca>=360:
+                            print(f'{self.nombre} ha ganado')
+                            # Si el número apostado coincide con el resultado, se incrementa el saldo en 360 euros
+                            self.saldo += 360
+                            self.ruleta.banca -= 360
+                        else:
+                            self.saldo += self.ruleta.banca
+                            self.ruleta.banca=0
+                    elif self.ruleta.resultado == 0:
+                        print('Ha salido el cero')
+                        self.ruleta.banca+=self.saldo
+                        self.saldo=0
+                    else:
+                        print(f'{self.nombre} ha perdido')
+                        # Si no coincide, se pierde la apuesta
                 else:
-                    print(f'{self.nombre} ha perdido')
-                    # Si no coincide, se pierde la apuesta
+                    print(f'{self.nombre} no ha tenido tiempo de apostar')
+                    pass
             else:
                 # Si no hay suficiente saldo para apostar, se sale del bucle
                 print(f'{self.nombre} no tiene suficiente pasta para apostar')
@@ -40,8 +53,7 @@ class jugador(threading.Thread):
                 # Se resta la apuesta del saldo
                 self.saldo -= self.apuesta
                 # Se simula el giro de la ruleta
-                resultado = random.randint(1, 36)
-                if resultado % 2 == 0:
+                if self.ruleta.resultado % 2 == 0:
                     # Si el resultado es par y se apostó a par, se incrementa el saldo en 20 euros
                     self.saldo += 20
                 else:
@@ -59,11 +71,14 @@ class jugador(threading.Thread):
                 # Se resta la apuesta del saldo
                 self.saldo -= self.apuesta
                 # Se simula el giro de la ruleta
-                resultado = random.randint(1, 36)
-                if resultado == numero:
+                if self.ruleta.resultado == numero:
                     # Si el número apostado coincide con el resultado, se incrementa el saldo en 360 euros
                     self.saldo += 360
+                    self.ruleta.banca -= 360
                     self.apuesta = 10  # Se vuelve a la apuesta inicial después de ganar
+                elif self.ruleta.resultado == 0:
+                    self.ruleta.banca+=self.saldo
+                    self.saldo=0
                 else:
                     # Si no coincide, se duplica la apuesta para el próximo turno
                     self.apuesta *= 2
@@ -71,24 +86,50 @@ class jugador(threading.Thread):
                 # Si no hay suficiente saldo para apostar, se sale del bucle
                 break
     def run(self):
-        self.jugar_numero()
+        while True:
+            if self.saldo>0 and self.ruleta.banca>0:
+                self.jugar_numero()
+            else:
+                break
 
-jugador1=jugador('Javi',1000,10)
-jugador2=jugador('Felipe',1000,10)
-jugador3=jugador('Andres',1000,10)
-jugador4=jugador('Juan',1000,10)
+class ruleta(threading.Thread):
+    def __init__(self,banca):
+        threading.Thread.__init__(self)
+        self.banca = banca
+        self.resultado=None
+        self.lock=threading.Lock()
+    def lanzar_bola(self):
+        self.resultado = random.randint(0,36)
+        time.sleep(3)
+        self.lock.acquire()
+        self.lock.release()
+    def run(self):
+        while True:
+            if self.banca>0 and self.resultado!=0 and self.banca<54000:
+                self.lanzar_bola()
+            else:
+                break
+
+ruleta1=ruleta(50000)
+jugador1=jugador('Javi',1000,10,ruleta1)
+jugador2=jugador('Felipe',1000,10,ruleta1)
+jugador3=jugador('Andres',1000,10,ruleta1)
+jugador4=jugador('Juan',1000,10,ruleta1)
 jugadores=[jugador1,jugador2,jugador3,jugador4]
 
 # Creación de hilos para simular los diferentes juegos
 for i in range(4):
     jugadores[i].start()
+ruleta1.start()
 
 # El hilo principal espera a que todos los hilos terminen antes de imprimir los saldos finales.
+ruleta1.join()
 for i in range(4):
     jugadores[i].join()
 
 # Se imprime el saldo final de cada jugador y el saldo final de la banca
 for i in range(4):
     print("Saldo final del jugador {}: {} euros".format(i+1, jugadores[i].saldo))
-print("Saldo final de la banca: {} euros".format(saldo_banca))
+print("Saldo final de la banca: {} euros".format(ruleta1.banca))
+
 
